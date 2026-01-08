@@ -175,6 +175,12 @@ In the `producer` directory, use the terraform plan to create the producer's VPC
 > [!TIP]
 > In production environments, it is recommended to deploy the producer resources to a dedicated project.  This ensures the security services are managed independently of the consumer.
 
+> [!CAUTION]
+> It is required to make your cloudshell git support large file download, run below command to install git lfs before you start to clone the source code.
+  
+    sudo apt install git-lfs
+
+
 1. In [Cloud Shell](https://shell.cloud.google.com), clone the repository change to the `producer` directory. 
 
     ```
