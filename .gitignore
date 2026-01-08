@@ -8,5 +8,3 @@ terraform.tfstate
 terraform.tfstate.backup
 terraform.tfvars
 *.tfvars
-producer/bootstrap_files/panup-all-antivirus-5120-5639
-producer/bootstrap_files/panupv2-all-contents-8952-9326
