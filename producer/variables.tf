@@ -111,3 +111,10 @@ variable "vmseries_metrics" {
     }
   }
 }
+
+
+variable "mirroring_mode" {
+  description = "If true, configures the forwarding rule for packet mirroring. If false, configures it for in-band traffic."
+  type        = bool
+  default     = false
+}

@@ -12,8 +12,6 @@ The functionality of each model is summarized as follows:
 
 This tutorial is intended for network administrators, solution architects, and security professionals who are familiar with [Compute Engine](https://cloud.google.com/compute) and [Virtual Private Cloud (VPC) networking](https://cloud.google.com/vpc).
 
-> [!CAUTION] 
-> This guide uses the *in-line* model, which is in private preview and must be enabled for your Google account. If you require passive inspection, steps for the *out-of-band* model are included where necessary. 
 
 <br>
 
@@ -115,7 +113,7 @@ The network firewall policy associated with the `consumer-vpc` contains two rule
     <tr>
         <td><code>10</code></td>
         <td><code>Egress</code></td>
-        <td><code>10.0.0.0/8</code></td>
+        <td><code>0.0.0.0/8</code></td>
         <td><code>0.0.0.0/0</code></td>
         <td><code>apply-security-profile</code></td>
     </tr>
@@ -123,7 +121,7 @@ The network firewall policy associated with the `consumer-vpc` contains two rule
         <td><code>11</code></td>
         <td><code>Ingress</code></td>
         <td><code>0.0.0.0/0</code></td>
-        <td><code>10.0.0.0/8</code></td>
+        <td><code>0.0.0.0/8</code></td>
         <td><code>apply-security-profile</code></td>
     </tr>
 </table>
@@ -184,8 +182,8 @@ In the `producer` directory, use the terraform plan to create the producer's VPC
 1. In [Cloud Shell](https://shell.cloud.google.com), clone the repository change to the `producer` directory. 
 
     ```
-    git clone https://github.com/PaloAltoNetworks/google-cloud-nsi-demo.git
-    cd google-cloud-nsi-demo/producer
+    git clone https://github.com/PaloAltoNetworks/google-cloud-nsi-ui-demo.git
+    cd google-cloud-nsi-ui-demo/producer
     ```
 
 2. Create a `terraform.tfvars`.
@@ -203,6 +201,7 @@ In the `producer` directory, use the terraform plan to create the producer's VPC
     | `mgmt_public_ip` | If true, the management address will have a public IP assigned to it. | `true` | 
     | `region` | The region to deploy the consumer resources. | `us-west1` |
     | `image_name` | The firewall image to deploy. | `vmseries-flex-bundle2-1126`|
+    | `mirroring_mode` | If true, configures the forwarding rule for packet mirroring. If false, configures it for in-band traffic. | `false` |
 
 
 > [!CAUTION]
@@ -238,7 +237,6 @@ In the `producer` directory, use the terraform plan to create the producer's VPC
     export <b>ZONE</b>=<i>us-west1-a</i>
     export <b>BACKEND_SERVICE</b>=<i>https://www.googleapis.com/compute/v1/projects/your-project-id/regions/us-west1/backendServices/panw-nsi-lb</i></pre>
 
-7. **Copy-and-paste** the `ENVIRONMENT_VARIABLES` output into Cloud Shell to set environment variables.
 
 > [!IMPORTANT] 
 > The `init-cfg.txt` includes `plugin-op-commands=geneve-inspect:enable` bootstrap parameter, allowing firewalls to handle GENEVE encapsulated traffic forwarded via packet intercept. 
@@ -246,24 +244,8 @@ In the `producer` directory, use the terraform plan to create the producer's VPC
 
 <br>
 
-# On the Producer Project
+# ***On the Producer Project***
 
-## Creation of Load Balancer Forwarding Rule
-
-Navigate to Network Services, and select the Load Balancer (`ui-nsi-panw-lb`) provisioned by the Terraform Template. Select "Edit" and proceed to the Frontend configuration. Choose "Add Frontend IP and port" and configure the Frontend settings as follows:
-
-* **Name:** `ui-nsi-panw-lb-forwarding-rule` (This serves as the rule's identifier)  
-* **IP Address:** Ephemeral (Custom) \- A Static IP address is required to align with the Firewall configuration.  
-* **Custom ephemeral IP address:** `10.0.1.3`  
-* **Port:** Single  
-* **Port Number:** `6081`
-
-Upon completion, select "Done," then select "Update" to activate the Forwarding Rule for the Load Balancer.  
-<img src="images/Picture1.png" alt="Picture1" width="500">
-
-Allow a brief period for the configuration to take effect, after which the Frontend Health Check status should indicate "100% health."Creation of NSI Deployment Group
-
-<img src="images/Picture2.png" alt="Picture2" width="500">
 
 ## Create NSI Deployment Group:
 
@@ -293,7 +275,65 @@ After a short waiting period, the intercept deployment's status should transitio
 
 <img src="images/Picture5.png" alt="Picture5" width="500">
 
-# On the Consumer project
+</br>
+
+---
+
+# ***On the Consumer project***
+
+## Create Consumer Environment
+
+In the `consumer` directory, use the terraform plan to create a consumer environment. The terraform plan creates a VPC (`consumer-vpc`) , two debian VMs (`client-vm` & `web-vm`), and a GKE cluster (`cluster1`) (optional).
+
+> [!NOTE]
+> If you already have an existing consumer environment, skip to [Create Intercept Endpoint Group](#create-intercept-endpoint--endpoint-group).
+
+1. In Cloud Shell, change to the `consumer` directory.
+
+    ```
+    cd
+    cd google-cloud-nsi-ui-demo/consumer
+    ```
+
+2. Create a `terraform.tfvars`
+
+    ```
+    cp terraform.tfvars.example terraform.tfvars
+    ```
+
+3. Edit `terraform.tfvars` by setting values for the following variables:  
+   
+
+    | Variable | Description | Default |
+    | :---- | :---- | :---- |
+    | `project_id` | The project ID of the consumer environment. | `null` |
+    | `mgmt_allowed_ips` | A list of IPv4 addresses that can access the VMs on `TCP:80,22`. | `["0.0.0.0/0"]` |
+    | `region` | The region to deploy the consumer resources. | `us-west1` |
+    | `create_gke` | Whether to create the GKE cluster. | `false` |
+
+4. Initialize and apply the terraform plan.
+
+    ```
+    terraform init
+    terraform apply
+    ```
+
+    Enter `yes` to apply the plan.
+
+5. After the apply completes, terraform displays the following message:
+
+    <pre>
+    export <b>CONSUMER_PROJECT</b>=<i>your-project-id</i>
+    export <b>CONSUMER_VPC</b>=<i>consumer-vpc</i>
+    export <b>REGION</b>=<i>us-west1</i>
+    export <b>ZONE</b>=<i>s-west1-a</i>
+    export <b>CLIENT_VM</b>=<i>client-vm</i>
+    export <b>CLUSTER</b>=<i>cluster1</i>
+    export <b>ORG_ID</b>=<i>$(gcloud projects describe your-project-id --format=json | jq -r '.parent.id')</i></pre>
+
+
+<br>
+
 
 ## Create Intercept Endpoint & Endpoint Group
 
@@ -380,53 +420,134 @@ Select "Create firewall rule." (Two firewall rules are required: one for egress 
   * **Destination filters:** IPv4: `0.0.0.0/0`  
   * All other settings should remain at their default values.
 
-Select "Continue" and bypass the "Add mirroring rules" section, as interception is being applied instead of mirroring.
+Select "Continue" and bypass the "Add mirroring rules" section, as interception is being applied in this demo instead of mirroring (***use mirror rule instead of firewall rule if you are using mirroring mode.***).
 
 In the **Associate policy with networks** section, select "Associate." Select the `ui-nsi-consumer-vpc` and select "Associate."  
-<img src="images/Picture11.png" alt="Picture11" width="500">  
+      <img src="images/Picture11.png" alt="Picture11" width="500">  
+      
 Select "Create."
+
+## Test Inspection
+
+Test inspection by generating pseudo-malicious traffic between VMs and also between VMs and the internet.  Then, generate pseudo-malicious traffic within the GKE cluster (`cluster1`) to test pod-to-pod inspection.
+
+### GCE Inspection
+Simulate pseudo-malicious traffic for both east-west and north-south traffic flows.
+
+1. In Cloud Shell, remotely generate pseudo-malicious traffic on the `client-vm` to simulate malicious traffic to the `web-vm` (east/west) and to the `internet` (north/south).
+
+    ```
+    gcloud compute ssh $CLIENT_VM \
+        --zone $ZONE \
+        --tunnel-through-iap \
+        --command="bash -s" << 'EOF'
+    curl -s -o /dev/null -w "%{http_code}\n" http://www.eicar.org/cgi-bin/.%2e/.%2e/.%2e/.%2e/bin/sh --data "echo Content-Type: text/plain; echo; uname -a" --max-time 2
+    curl -s -o /dev/null -w "%{http_code}\n" http://www.eicar.org/cgi-bin/user.sh -H "FakeHeader:() { :; }; echo Content-Type: text/html; echo ; /bin/uname -a" --max-time 2
+    curl -s -o /dev/null -w "%{http_code}\n" http://10.1.0.20/cgi-bin/user.sh -H "FakeHeader:() { :; }; echo Content-Type: text/html; echo ; /bin/uname -a" --max-time 2
+    curl -s -o /dev/null -w "%{http_code}\n" http://10.1.0.20/cgi-bin/.%2e/.%2e/.%2e/.%2e/etc/passwd --max-time 2
+    EOF
+    ```
+
+    (output)
+    
+    <pre>
+    <b>000
+    000 
+    000
+    000</b></pre>
+
+    > The `000` response codes indicate that the traffic was blocked by the producer. 
+    > The *out-of-band* deployment will not produce `000` response codes since it is only monitoring the traffic.
+
+
+2. Retrieve the firewall’s management address.
+
+    ```
+    gcloud compute instances list \
+        --filter='tags.items=(panw-tutorial)' \
+        --format='table[box,title="Firewall MGMT"](networkInterfaces[0].accessConfigs[0].natIP:label=EXTERNAL_IP, networkInterfaces[0].networkIP:label=INTERNAL_IP)'
+    ```
+
+3. Access the firewall’s web interface using the management address.
+
+    <pre>
+    https://<b><i>MGMT_ADDRESS</i></b></pre>
+    Username:
+    ```
+    admin
+    ```
+    Password:
+    ```
+    PaloAlto@123
+    ```
+---
+
+4. On the firewall, go to **Monitor → Threat** to confirm the firewall prevented the north/south and east/west threats generated by the `client-vm` .
+
+    <img src="images/threat_gce.png" width="100%">
+
+<br>
+
 
 # (Optional) Deletion
 
 ## On the Consumer Project:
 
-Navigate to Network Security \-\> Cloud NGFW \-\> Firewall policies.
+  1. Navigate to Network Security \-\> Cloud NGFW \-\> Firewall policies. Locate the Network firewall policy created by name.
 
-Locate the Network firewall policy created by name.
+  2. Remove the firewall policy associations.
 
-### Remove the firewall policy associations.
+     <img src="images/Picture12.png" alt="Picture12" width="500">
 
-<img src="images/Picture12.png" alt="Picture12" width="500">
+  3. Delete the Firewall policy.
 
-## Delete the Firewall policy.
+      <img src="images/Picture13.png" alt="Picture13" width="500">
 
-<img src="images/Picture13.png" alt="Picture13" width="500">
+  4. Delete the Security Profile Group and Security Profile (Org-level permission is required).
 
-## Delete the Security Profile Group and Security Profile (Org-level permission is required).
+      Navigate to Network Security \-\> Common components \-\> Security profiles \-\> Security profile groups.
 
-Navigate to Network Security \-\> Common components \-\> Security profiles \-\> Security profile groups.
-
-<img src="images/Picture20.png" alt="Picture20" width="500">
+      <img src="images/Picture20.png" alt="Picture20" width="500">
 
 
-Select and delete the security profile group created.
+      Select and delete the security profile group created.
 
-Navigate to Network Security \-\> Common components \-\> Security profiles.
+      Navigate to Network Security \-\> Common components \-\> Security profiles.
 
-Select and delete the security profiles created.
+      Select and delete the security profiles created.
 
-<img src="images/Picture19.png" alt="Picture19" width="500">
+      <img src="images/Picture19.png" alt="Picture19" width="500">
 
-Navigate to Network Security \-\> Cloud NSI \-\> Endpoint groups. Select the created endpoint group, select the association created, and delete it. (The association must be removed prior to deleting the endpoint group.) Subsequently, delete the endpoint group.
+      Navigate to Network Security \-\> Cloud NSI \-\> Endpoint groups. Select the created endpoint group, select the association created, and delete it. (The association must be removed prior to deleting the endpoint group.) Subsequently, delete the endpoint group.
 
-<img src="images/Picture16.png" alt="Picture16" width="500">
+      <img src="images/Picture16.png" alt="Picture16" width="500">
+
+  5. Run `terraform destroy` from the `consumer` directory.
+
+        ```
+        cd
+        cd google-cloud-nsi-ui-demo/consumer
+        terraform destroy
+        ```
+
+  6. Enter `yes` to delete all consumer resources.
 
 ## On the Producer Project:
 
-Navigate to Network Security \-\> Cloud NSI \-\> Deployment groups. Select the created deployment group. Select the intercept deployment endpoint, and delete it.
+  1. Navigate to Network Security \-\> Cloud NSI \-\> Deployment groups. Select the created deployment group. Select the intercept deployment endpoint, and delete it.
 
-<img src="images/Picture17.png" alt="Picture17" width="700">
+      <img src="images/Picture17.png" alt="Picture17" width="700">
 
-The deployment group may now be deleted.  
+      The deployment group may now be deleted.  
 
-<img src="images/Picture18.png" alt="Picture18" width="700">
+      <img src="images/Picture18.png" alt="Picture18" width="700">
+
+  2. Run `terraform destroy` from the `/producer` directory.
+
+        ```
+        cd
+        cd google-cloud-nsi-ui-demo/producer
+        terraform destroy
+        ```
+
+  3. Enter `yes` to delete all producer resources.
