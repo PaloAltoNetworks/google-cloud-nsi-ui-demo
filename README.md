@@ -309,7 +309,7 @@ In the `consumer` directory, use the terraform plan to create a consumer environ
     | `project_id` | The project ID of the consumer environment. | `null` |
     | `mgmt_allowed_ips` | A list of IPv4 addresses that can access the VMs on `TCP:80,22`. | `["0.0.0.0/0"]` |
     | `region` | The region to deploy the consumer resources. | `us-west1` |
-    | `create_gke` | Whether to create the GKE cluster. | `false` |
+    | `create_gke` | Whether to create the GKE cluster. | `true` |
 
 4. Initialize and apply the terraform plan.
 
@@ -424,7 +424,7 @@ Select "Continue" and bypass the "Add mirroring rules" section, as interception 
 
 In the **Associate policy with networks** section, select "Associate." Select the `ui-nsi-consumer-vpc` and select "Associate."  
       <img src="images/Picture11.png" alt="Picture11" width="500">  
-      
+
 Select "Create."
 
 ## Test Inspection
