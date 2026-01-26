@@ -263,7 +263,7 @@ Select "Create Intercept deployment" and configure the settings:
 * **Region:** `us-west1`  
 * **Zone:** `us-west1-a`  
 * **Load balancer:** `ui-nsi-panw-lb`  
-* **Forwarding rule:** `ui-nis-panw-lb-forwarding-rule` (The rule created in the preceding step)
+* **Forwarding rule:** `[prefix]-panw-lb-rule` (The rule created by terraform)
 
 **Note:** The preceding steps may be replicated to create multiple intercept deployments for individual zones, should the protection of resources across various zones be required. For the purpose of this demonstration, interception is enabled exclusively for resources within the `us-west1-a` zone.
 
